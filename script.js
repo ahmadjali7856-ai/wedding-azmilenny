@@ -330,11 +330,11 @@ function loadWishes() {
     fetch("https://script.google.com/macros/s/AKfycbzv3J1B50r85zxfjJXYXEPYkraWPlHcqt72T1Sk-NqaJDcyVq72yJOrEOHwCja8EkPKQQ/exec")
     .then(res => res.json())
     .then(wishes => {
-        // Filter: hilangkan data test/sistem
+        // Filter: hilangkan data test/sistem dan data dari Putri & Bambang (#PB#)
         const filtered = wishes.filter(w => {
             const name = (w.name || '').toLowerCase().trim();
             const msg  = (w.message || '').toLowerCase().trim();
-            return name !== 'sistem' && !msg.includes('tes dari sistem') && name !== 'test' && name !== 'tes';
+            return name !== 'sistem' && !msg.includes('tes dari sistem') && name !== 'test' && name !== 'tes' && !msg.includes('#pb#');
         });
 
         if (filtered.length === 0) {
