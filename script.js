@@ -253,19 +253,33 @@ function submitWish(event) {
     // 1. Kirim ke Discord Webhook
     sendToDiscord(wish);
 
-    // 2. Simpan ke LocalStorage dan update tampilan
-    let wishes = JSON.parse(localStorage.getItem('weddingWishes') || '[]');
-    wishes.push(wish);
-    localStorage.setItem('weddingWishes', JSON.stringify(wishes));
-    loadWishes();
+    // 2. Simpan ke Google Sheets
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '⏳ Mengirim...';
+    submitBtn.disabled = true;
 
-    // 3. Tampilkan notifikasi sukses di website
-    alert('Terima kasih! Pesan dan konfirmasi kehadiran Anda telah berhasil dikirim.');
-
-    // 4. Reset form
-    nameEl.value = '';
-    msgEl.value = '';
-    attendEl.value = 'hadir';
+    fetch("https://script.google.com/macros/s/AKfycbzv3J1B50r85zxfjJXYXEPYkraWPlHcqt72T1Sk-NqaJDcyVq72yJOrEOHwCja8EkPKQQ/exec", {
+        method: 'POST',
+        body: JSON.stringify(wish)
+    }).then(() => {
+        // 3. Tampilkan notifikasi sukses di website
+        alert('Terima kasih! Pesan dan konfirmasi kehadiran Anda telah berhasil dikirim.');
+        
+        // 4. Reset form & refresh daftar ucapan
+        nameEl.value = '';
+        msgEl.value = '';
+        attendEl.value = 'hadir';
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        
+        loadWishes();
+    }).catch(err => {
+        console.error(err);
+        alert('Maaf, terjadi kesalahan saat mengirim pesan.');
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+    });
 }
 
 function sendToDiscord(wish) {
@@ -311,27 +325,35 @@ function loadWishes() {
     const container = document.getElementById('wish-list-container');
     if (!container) return;
     
-    const wishes = JSON.parse(localStorage.getItem('weddingWishes') || '[]');
-    if (wishes.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#666; font-style:italic;">Belum ada ucapan. Jadilah yang pertama memberikan ucapan!</p>';
-        return;
-    }
+    container.innerHTML = '<p style="text-align:center; color:#888;">Memuat daftar ucapan...</p>';
 
-    container.innerHTML = wishes.reverse().map(wish => {
-        let badgeColor = wish.attendance === 'hadir' ? '#28a745' : wish.attendance === 'tidak' ? '#dc3545' : '#ffc107';
-        let badgeText = wish.attendance === 'hadir' ? 'Hadir' : wish.attendance === 'tidak' ? 'Tidak Hadir' : 'Ragu';
-        
-        return `
-            <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--pink-dark);">
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-                    <h4 style="color: var(--denim-dark); margin: 0; font-size: 1.1rem;">${escapeHtml(wish.name)}</h4>
-                    <span style="font-size: 0.75rem; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px;">${badgeText}</span>
+    fetch("https://script.google.com/macros/s/AKfycbzv3J1B50r85zxfjJXYXEPYkraWPlHcqt72T1Sk-NqaJDcyVq72yJOrEOHwCja8EkPKQQ/exec")
+    .then(res => res.json())
+    .then(wishes => {
+        if (wishes.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#666; font-style:italic;">Belum ada ucapan. Jadilah yang pertama memberikan ucapan!</p>';
+            return;
+        }
+
+        container.innerHTML = wishes.reverse().map(wish => {
+            let badgeColor = wish.attendance === 'hadir' ? '#28a745' : wish.attendance === 'tidak' ? '#dc3545' : '#ffc107';
+            let badgeText = wish.attendance === 'hadir' ? 'Hadir' : wish.attendance === 'tidak' ? 'Tidak Hadir' : 'Ragu';
+            
+            return `
+                <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--pink-dark);">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                        <h4 style="color: var(--denim-dark); margin: 0; font-size: 1.1rem;">${escapeHtml(wish.name)}</h4>
+                        <span style="font-size: 0.75rem; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px;">${badgeText}</span>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;">${wish.time}</p>
+                    <p style="font-size: 0.95rem; color: #444; line-height: 1.5; font-style: italic;">"${escapeHtml(wish.message)}"</p>
                 </div>
-                <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;">${wish.time}</p>
-                <p style="font-size: 0.95rem; color: #444; line-height: 1.5; font-style: italic;">"${escapeHtml(wish.message)}"</p>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }).catch(err => {
+        console.error(err);
+        container.innerHTML = '<p style="text-align:center; color:red;">Gagal memuat ucapan dari server.</p>';
+    });
 }
 
 function escapeHtml(text) {
