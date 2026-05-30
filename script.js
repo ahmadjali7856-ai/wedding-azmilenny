@@ -330,19 +330,26 @@ function loadWishes() {
     fetch("https://script.google.com/macros/s/AKfycbzv3J1B50r85zxfjJXYXEPYkraWPlHcqt72T1Sk-NqaJDcyVq72yJOrEOHwCja8EkPKQQ/exec")
     .then(res => res.json())
     .then(wishes => {
-        if (wishes.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#666; font-style:italic;">Belum ada ucapan. Jadilah yang pertama memberikan ucapan!</p>';
+        // Filter: hilangkan data test/sistem
+        const filtered = wishes.filter(w => {
+            const name = (w.name || '').toLowerCase().trim();
+            const msg  = (w.message || '').toLowerCase().trim();
+            return name !== 'sistem' && !msg.includes('tes dari sistem') && name !== 'test' && name !== 'tes';
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
             return;
         }
 
-        container.innerHTML = wishes.reverse().map(wish => {
+        container.innerHTML = filtered.reverse().map(wish => {
             let badgeColor = wish.attendance === 'hadir' ? '#28a745' : wish.attendance === 'tidak' ? '#dc3545' : '#ffc107';
-            let badgeText = wish.attendance === 'hadir' ? 'Hadir' : wish.attendance === 'tidak' ? 'Tidak Hadir' : 'Ragu';
+            let badgeText  = wish.attendance === 'hadir' ? 'Hadir'  : wish.attendance === 'tidak' ? 'Tidak Hadir' : 'Ragu';
             
             return `
-                <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--pink-dark);">
+                <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--gold);">
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-                        <h4 style="color: var(--denim-dark); margin: 0; font-size: 1.1rem;">${escapeHtml(wish.name)}</h4>
+                        <h4 style="color: var(--text-dark); margin: 0; font-size: 1.1rem;">${escapeHtml(wish.name)}</h4>
                         <span style="font-size: 0.75rem; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px;">${badgeText}</span>
                     </div>
                     <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;">${wish.time}</p>
