@@ -253,10 +253,16 @@ function submitWish(event) {
     // 1. Kirim ke Discord Webhook
     sendToDiscord(wish);
 
-    // 2. Tampilkan notifikasi sukses di website
+    // 2. Simpan ke LocalStorage dan update tampilan
+    let wishes = JSON.parse(localStorage.getItem('weddingWishes') || '[]');
+    wishes.push(wish);
+    localStorage.setItem('weddingWishes', JSON.stringify(wishes));
+    loadWishes();
+
+    // 3. Tampilkan notifikasi sukses di website
     alert('Terima kasih! Pesan dan konfirmasi kehadiran Anda telah berhasil dikirim.');
 
-    // 3. Reset form
+    // 4. Reset form
     nameEl.value = '';
     msgEl.value = '';
     attendEl.value = 'hadir';
@@ -302,8 +308,30 @@ function sendToDiscord(wish) {
 }
 
 function loadWishes() {
-    // Fungsi ini dinonaktifkan karena daftar ucapan disembunyikan di website
-    // dan langsung dikirim ke Discord.
+    const container = document.getElementById('wish-list-container');
+    if (!container) return;
+    
+    const wishes = JSON.parse(localStorage.getItem('weddingWishes') || '[]');
+    if (wishes.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#666; font-style:italic;">Belum ada ucapan. Jadilah yang pertama memberikan ucapan!</p>';
+        return;
+    }
+
+    container.innerHTML = wishes.reverse().map(wish => {
+        let badgeColor = wish.attendance === 'hadir' ? '#28a745' : wish.attendance === 'tidak' ? '#dc3545' : '#ffc107';
+        let badgeText = wish.attendance === 'hadir' ? 'Hadir' : wish.attendance === 'tidak' ? 'Tidak Hadir' : 'Ragu';
+        
+        return `
+            <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); padding: 15px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--pink-dark);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                    <h4 style="color: var(--denim-dark); margin: 0; font-size: 1.1rem;">${escapeHtml(wish.name)}</h4>
+                    <span style="font-size: 0.75rem; background: ${badgeColor}; color: white; padding: 3px 8px; border-radius: 10px;">${badgeText}</span>
+                </div>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;">${wish.time}</p>
+                <p style="font-size: 0.95rem; color: #444; line-height: 1.5; font-style: italic;">"${escapeHtml(wish.message)}"</p>
+            </div>
+        `;
+    }).join('');
 }
 
 function escapeHtml(text) {
